@@ -88,6 +88,8 @@ public class Server implements ServerInterface {
     	vector.put(message.getSender(), v);
     	
 		queue.remove(message);
+		
+		System.out.println(String.format("Received message from %d with clock %s",message.getSender(),message.getVector()));
 	}
 	
 	private boolean canBeDelivered(Message m ) {
