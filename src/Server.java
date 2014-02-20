@@ -4,7 +4,7 @@ import java.rmi.AlreadyBoundException;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
         
-public class Server implements Recieve {
+public class Server implements ServerInterface {
 
 	public static final String BINDING = "Recieve";
         
@@ -13,7 +13,7 @@ public class Server implements Recieve {
         try {
         	java.rmi.registry.LocateRegistry.createRegistry(1099);
             Server obj = new Server();
-            Recieve stub = (Recieve) UnicastRemoteObject.exportObject(obj, 0);
+            ServerInterface stub = (ServerInterface) UnicastRemoteObject.exportObject(obj, 0);
 
             // Bind the remote object's stub in the registry
             Registry registry = LocateRegistry.getRegistry();
@@ -28,6 +28,12 @@ public class Server implements Recieve {
 
 	@Override
 	public void recieve(Message message) throws RemoteException {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void deliver(Message message) throws RemoteException {
 		// TODO Auto-generated method stub
 		
 	}

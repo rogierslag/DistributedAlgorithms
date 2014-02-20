@@ -13,7 +13,7 @@ public class Client {
 		String host = (args.length < 1) ? null : args[0];
 		try {
 			Registry registry = LocateRegistry.getRegistry(host);
-			Recieve stub = (Recieve) registry.lookup(Server.BINDING);
+			ServerInterface stub = (ServerInterface) registry.lookup(Server.BINDING);
 //			stub.recieve(new Message("bla", vector));
 		} catch (RemoteException | NotBoundException e) {
 			System.err.println("Client exception: " + e.toString());
