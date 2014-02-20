@@ -4,22 +4,20 @@ import java.rmi.AlreadyBoundException;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
         
-public class Server implements Hello {
+public class Server implements Recieve {
 
-	public String sayHello() {
-        return "Hello, world!";
-    }
+	public static final String BINDING = "Recieve";
         
     public static void main(String args[]) {
     	
         try {
         	java.rmi.registry.LocateRegistry.createRegistry(1099);
             Server obj = new Server();
-            Hello stub = (Hello) UnicastRemoteObject.exportObject(obj, 0);
+            Recieve stub = (Recieve) UnicastRemoteObject.exportObject(obj, 0);
 
             // Bind the remote object's stub in the registry
             Registry registry = LocateRegistry.getRegistry();
-            registry.bind("Hello", stub);
+            registry.bind(BINDING, stub);
 
             System.err.println("Server ready");
         } catch (RemoteException | AlreadyBoundException e) {
@@ -27,4 +25,10 @@ public class Server implements Hello {
             e.printStackTrace();
         }
     }
+
+	@Override
+	public void recieve(Message message) throws RemoteException {
+		// TODO Auto-generated method stub
+		
+	}
 }
