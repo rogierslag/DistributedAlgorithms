@@ -1,10 +1,11 @@
 import java.util.ArrayList;
+import java.util.Map;
 
 public class Message {
 	private final String message;
-	private final ArrayList<Integer> vector;
+	private final Map<Integer,Integer> vector;
 	
-	public Message(String message, ArrayList<Integer> vector) {
+	public Message(String message, Map<Integer,Integer> vector) {
 		this.message = message;
 		this.vector = vector;
 	}
@@ -13,7 +14,7 @@ public class Message {
 		return message;
 	}
 
-	public ArrayList<Integer> getVector() {
+	public Map<Integer,Integer> getVector() {
 		return vector;
 	}
 }
