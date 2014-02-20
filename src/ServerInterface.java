@@ -3,5 +3,4 @@ import java.rmi.RemoteException;
 
 public interface ServerInterface extends Remote {
     void recieve(Message message) throws RemoteException;
-    void deliver(Message message) throws RemoteException;
 }

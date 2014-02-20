@@ -40,7 +40,7 @@ public class Server implements ServerInterface {
 
             // Bind the remote object's stub in the registry
             Registry registry = LocateRegistry.getRegistry();
-            registry.bind(Integer.toString(Integer.parseInt(args[0]))+"", stub);
+            registry.bind(args[0], stub);
 
             System.err.println("Server ready");
         } catch (RemoteException | AlreadyBoundException e) {
@@ -83,8 +83,7 @@ public class Server implements ServerInterface {
 		}
 	}
 
-	@Override
-	public void deliver(Message message) throws RemoteException {
+	public void deliver(Message message) {
 		int v = vector.get(me)+1;
     	vector.put(me, v);
     	
