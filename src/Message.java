@@ -1,6 +1,9 @@
+import java.io.Serializable;
 import java.util.Map;
 
-public class Message {
+public class Message implements Serializable {
+	private static final long serialVersionUID = 8689683240497397154L;
+	
 	private final String message;
 	private final int sender;
 	private final Map<Integer,Integer> vector;

@@ -1,82 +1,44 @@
-import java.rmi.AccessException;
-import java.rmi.AlreadyBoundException;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
-import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.PriorityQueue;
-import java.util.Queue;
         
 public class Server implements ServerInterface {
-	
-	public static final int PORT = 1099;
 
 	private final int me;
 	private final int total;
 	private final Map<Integer,Integer> vector;
 	
-	private final Queue<Message> queue = new PriorityQueue<>();
+	private final List<Message> queue = new ArrayList<>();
 	
-	private static final List<Server> serverList = new ArrayList<>();
-        
     public Server(int me, int total) {
 		this.me = me;
 		this.total = total;
 		this.vector = new HashMap<Integer,Integer>(total);
 		for(int i = 0; i < total; i++ ) {
-			vector.put(i, 0);
+			getVector().put(i, 0);
 		}
 	}
 
-	public static void main(String args[]) {
+    public void broadcast(String message) {
+    	int v = getVector().get(getMe())+1;
+    	getVector().put(getMe(), v);
     	
-        try {
-        	java.rmi.registry.LocateRegistry.createRegistry(PORT);
-            
-			int totalNumber = Integer.parseInt(args[0]);
-			for(int i = 0; i < totalNumber; i++) {
-				createServer(i, totalNumber);
-			}
-        } catch (RemoteException | AlreadyBoundException e) {
-            System.err.println("Server exception: " + e.toString());
-            e.printStackTrace();
-        }
-    }
-
-	private static void createServer(int myNumber, int totalNumber)
-			throws RemoteException, AlreadyBoundException, AccessException {
-		Server server = new Server(myNumber,totalNumber);
-		ServerInterface stub = (ServerInterface) UnicastRemoteObject.exportObject(server, 0);
-
-		// Bind the remote object's stub in the registry
-		Registry registry = LocateRegistry.getRegistry();
-		registry.bind(Integer.toString(myNumber), stub);
-		
-		serverList.add(server);
-
-		System.out.println("Server" + myNumber + "ready");
-	}
-
-    public void broadcast(Message message) {
-    	int v = vector.get(me)+1;
-    	vector.put(me, v);
-    	
-    	for ( int i = 0; i < total; i++) {
-    		if ( i == this.me) {
-    			continue;
-    		}
-    		try {
-    			Registry registry = LocateRegistry.getRegistry(Server.PORT);
-    			ServerInterface stub = (ServerInterface) registry.lookup(Integer.toString(this.me));
-    			stub.recieve(new Message("bla", vector, me));
-    		} catch (RemoteException | NotBoundException e) {
-    			System.err.println("Client exception: " + e.toString());
-    			e.printStackTrace();
+    	for (int i = 0; i < total; i++) {
+    		if (i != this.getMe()) {
+    			try {
+    				Registry registry = LocateRegistry.getRegistry(Main.PORT);
+    				ServerInterface stub = (ServerInterface) registry.lookup(Integer.toString(i));
+    				System.out.println("broadcasted: " + message);
+    				stub.recieve(new Message(message, getVector(), getMe()));
+    			} catch (RemoteException | NotBoundException e) {
+    				System.err.println("Client exception: " + e.toString());
+    				e.printStackTrace();
+    			}
     		}
     		
     	}
@@ -84,7 +46,7 @@ public class Server implements ServerInterface {
     
 	@Override
 	public void recieve(Message message) throws RemoteException {
-		if ( !canBeDelivered(message)) {
+		if (!canBeDelivered(message)) {
 			queue.add(message);
 		} else {
 			deliver(message);
@@ -97,22 +59,34 @@ public class Server implements ServerInterface {
 	}
 
 	public void deliver(Message message) {
-		int v = vector.get(message.getSender())+1;
-    	vector.put(message.getSender(), v);
+		int v = getVector().get(message.getSender())+1;
+    	getVector().put(message.getSender(), v);
     	
 		queue.remove(message);
 		
-		System.out.println(String.format("Received message from %d with clock %s",message.getSender(),message.getVector()));
+		System.out.println(String.format("%d Received message from %d with clock %s", me , message.getSender(), message.getVector()));
 	}
 	
-	private boolean canBeDelivered(Message m ) {
-		for (Integer messageNumer : m.getVector().values()) {
-			for (Integer myNumber : vector.values()) {
-				if ( messageNumer < myNumber) {
-					return false;
-				}
+	private boolean canBeDelivered(Message recievedMessage) {
+		Map<Integer, Integer> messageVector = recievedMessage.getVector();
+		for (Integer key : messageVector.keySet()) {
+			int recievedMessageClock = messageVector.get(key);
+			Integer ownClock = vector.get(key);
+			if (key == recievedMessage.getSender()) {
+				ownClock++;
+			}
+			if (ownClock < recievedMessageClock) {
+				return false;
 			}
 		}
 		return true;
+	}
+
+	public Map<Integer,Integer> getVector() {
+		return vector;
+	}
+
+	public int getMe() {
+		return me;
 	}
 }
