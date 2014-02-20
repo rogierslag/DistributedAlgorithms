@@ -60,7 +60,7 @@ public class Server implements ServerInterface {
     		try {
     			Registry registry = LocateRegistry.getRegistry(Server.PORT);
     			ServerInterface stub = (ServerInterface) registry.lookup(Integer.toString(this.me));
-    			stub.recieve(new Message("bla", vector));
+    			stub.recieve(new Message("bla", vector, me));
     		} catch (RemoteException | NotBoundException e) {
     			System.err.println("Client exception: " + e.toString());
     			e.printStackTrace();
@@ -84,8 +84,8 @@ public class Server implements ServerInterface {
 	}
 
 	public void deliver(Message message) {
-		int v = vector.get(me)+1;
-    	vector.put(me, v);
+		int v = vector.get(message.getSender())+1;
+    	vector.put(message.getSender(), v);
     	
 		queue.remove(message);
 	}
