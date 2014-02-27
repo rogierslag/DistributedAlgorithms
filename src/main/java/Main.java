@@ -6,11 +6,11 @@ import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Random;
 
 public class Main {
 
 	public static final int PORT = 1099;
+	public static final int NUMBER_OF_CYCLES = 5;
 	
 	private static final List<Server> serverList = new ArrayList<>();
 
@@ -25,17 +25,29 @@ public class Main {
 			}
 			
 			for (Server server : serverList) {
-				server.broadcast(Integer.toString(new Random().nextInt()));
+				server.start();
 			}
-        } catch (RemoteException | AlreadyBoundException e) {
+        }
+        catch (RemoteException | AlreadyBoundException e) {
             System.err.println("Server exception: " + e.toString());
             e.printStackTrace();
         }
     }
+	
+	public static void checkThreads() {
+		for (Server server : serverList) {
+			List<Message> que = server.getQueue();
+			System.err.println("size: " + que.size());
+			for (Message message : que) {
+//				System.err.println(message.getVector());
+			}
+		}
+//		System.err.println("done");
+	}
 
 	private static void createServer(int myNumber, int totalNumber)
 			throws RemoteException, AlreadyBoundException, AccessException {
-		Server server = new Server(myNumber,totalNumber);
+		Server server = new Server(myNumber,totalNumber, NUMBER_OF_CYCLES);
 		ServerInterface stub = (ServerInterface) UnicastRemoteObject.exportObject(server, 0);
 
 		// Bind the remote object's stub in the registry

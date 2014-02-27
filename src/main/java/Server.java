@@ -2,26 +2,31 @@ import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import lombok.Getter;
+import lombok.Synchronized;
        
 @Getter
-public class Server implements ServerInterface {
+public class Server extends Thread implements ServerInterface {
 
 	private final int me;
 	private final int total;
 	private final Map<Integer, Integer> vector;
+	private final int numberOfCycles;
 	
-	private final List<Message> queue = new ArrayList<>();
+	private final List<Message> queue = new CopyOnWriteArrayList<Message>();
 	
-    public Server(int me, int total) {
+    public Server(int me, int total, int numberOfCycles) {
 		this.me = me;
 		this.total = total;
 		this.vector = new HashMap<Integer, Integer>(total);
+		this.numberOfCycles = numberOfCycles;
+		
 		for(int i = 0; i < total; i++ ) {
 			getVector().put(i, 0);
 		}
@@ -36,9 +41,10 @@ public class Server implements ServerInterface {
     			try {
     				Registry registry = LocateRegistry.getRegistry(Main.PORT);
     				ServerInterface stub = (ServerInterface) registry.lookup(Integer.toString(i));
-    				System.out.println("broadcasted: " + message);
+//    				System.out.println("broadcasted: " + message);
     				stub.recieve(new Message(message, getVector(), getMe()));
-    			} catch (RemoteException | NotBoundException e) {
+    			}
+    			catch (RemoteException | NotBoundException e) {
     				System.err.println("Client exception: " + e.toString());
     				e.printStackTrace();
     			}
@@ -48,13 +54,16 @@ public class Server implements ServerInterface {
     }
     
 	@Override
+	@Synchronized
 	public void recieve(Message message) throws RemoteException {
 		if (!canBeDelivered(message)) {
+//			System.out.println(String.format("%d, %d Qued message from with clock %s", me , message.getSender(), message.getVector()));
 			queue.add(message);
-		} else {
+		}
+		else {
 			deliver(message);
 			for (Message m : queue) {
-				if ( canBeDelivered(m)) {
+				if (canBeDelivered(m)) {
 					deliver(m);
 				}
 			}
@@ -67,7 +76,7 @@ public class Server implements ServerInterface {
     	
 		queue.remove(message);
 		
-		System.out.println(String.format("%d Received message from %d with clock %s", me , message.getSender(), message.getVector()));
+//		System.out.println(String.format("%d, %d Received message from with clock %s", me , message.getSender(), message.getVector()));
 	}
 	
 	private boolean canBeDelivered(Message recievedMessage) {
@@ -79,9 +88,25 @@ public class Server implements ServerInterface {
 				ownClock++;
 			}
 			if (ownClock < recievedMessageClock) {
+				System.err.println(me +", " + key + ": " + ownClock + ",  " + recievedMessageClock);
 				return false;
 			}
 		}
 		return true;
+	}
+	
+	@Override
+	public void run() {
+		try {
+			for (int i = 0; i < numberOfCycles; i++) {
+				sleep((long)(Math.random() * 1000));
+				broadcast(Integer.toString(new Random().nextInt()));
+			}
+			Main.checkThreads();
+		}
+		catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 }
