@@ -89,7 +89,7 @@ public class Server extends Thread implements ServerInterface {
 			if (key == recievedMessage.getSender()) {
 				ownClock++;
 			}
-			if (ownClock != recievedMessageClock) {
+			if (ownClock < recievedMessageClock) {
 //				System.err.println(me +", " + key + ": " + ownClock + ",  " + recievedMessageClock);
 				return false;
 			}
