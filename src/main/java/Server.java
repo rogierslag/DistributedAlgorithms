@@ -14,6 +14,7 @@ import lombok.Synchronized;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Maps;
        
 @Getter
 public class Server extends Thread implements ServerInterface {
@@ -37,7 +38,8 @@ public class Server extends Thread implements ServerInterface {
 	}
 
     public void broadcast(String message) {
-    	incrementClock(getMe());
+    	Map<Integer, Integer> incrementedVector = Maps.newHashMap(vector);
+    	incrementClock(incrementedVector, getMe());
     	
     	for (int i = 0; i < total; i++) {
     		if (i != this.getMe()) {
@@ -45,7 +47,7 @@ public class Server extends Thread implements ServerInterface {
     				Registry registry = LocateRegistry.getRegistry(Main.PORT);
     				ServerInterface stub = (ServerInterface) registry.lookup(Integer.toString(i));
 //    				System.out.println("broadcasted: " + message);
-    				stub.recieve(new Message(message, new HashMap<>(getVector()), getMe()));
+    				stub.recieve(new Message(message, incrementedVector, getMe()));
     			}
     			catch (RemoteException | NotBoundException e) {
     				System.err.println("Client exception: " + e.toString());
@@ -61,8 +63,7 @@ public class Server extends Thread implements ServerInterface {
 	public void recieve(Message message) throws RemoteException {
     	List<Message> syncQueue = queue;
 		if (canBeDelivered(message)) {
-			incrementClock(message.getSender());
-			syncQueue.remove(message);
+			deliver(message, syncQueue);
 			
 			for (Message m : getQueue()) {
 				if (canBeDelivered(m)) {
@@ -75,6 +76,11 @@ public class Server extends Thread implements ServerInterface {
 //			System.out.println(String.format("%d Qued message from %d with clock %s", me , message.getSender(), message.getVector()));
 			syncQueue.add(message);
 		}
+	}
+
+	private void deliver(Message message, List<Message> syncQueue) {
+		incrementClock(vector, message.getSender());
+		syncQueue.remove(message);
 	}
 
 	@Synchronized
@@ -100,8 +106,8 @@ public class Server extends Thread implements ServerInterface {
 	}
 	
 	@Synchronized
-	private void incrementClock(int sender) {
-		vector.put(sender, getVector().get(sender) + 1);
+	private void incrementClock(Map<Integer, Integer> vectorToIncrement, int sender) {
+		vectorToIncrement.put(sender, getVector().get(sender) + 1);
 	}
 	
 	@Synchronized
@@ -118,7 +124,7 @@ public class Server extends Thread implements ServerInterface {
 	public void run() {
 		try {
 			for (int i = 0; i < numberOfCycles; i++) {
-				sleep((long)(Math.random() * 100));
+				sleep((long)(Math.random() * 1));
 				broadcast(Integer.toString(new Random().nextInt()));
 			}
 			Main.checkThreads();

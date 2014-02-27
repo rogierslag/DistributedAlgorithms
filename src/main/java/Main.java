@@ -10,7 +10,7 @@ import java.util.List;
 public class Main {
 
 	public static final int PORT = 1099;
-	public static final int NUMBER_OF_CYCLES = 3;
+	public static final int NUMBER_OF_CYCLES = 10;
 	
 	private static final List<Server> serverList = new ArrayList<>();
 
