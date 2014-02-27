@@ -6,19 +6,22 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-        
+
+import lombok.Getter;
+       
+@Getter
 public class Server implements ServerInterface {
 
 	private final int me;
 	private final int total;
-	private final Map<Integer,Integer> vector;
+	private final Map<Integer, Integer> vector;
 	
 	private final List<Message> queue = new ArrayList<>();
 	
     public Server(int me, int total) {
 		this.me = me;
 		this.total = total;
-		this.vector = new HashMap<Integer,Integer>(total);
+		this.vector = new HashMap<Integer, Integer>(total);
 		for(int i = 0; i < total; i++ ) {
 			getVector().put(i, 0);
 		}
@@ -80,13 +83,5 @@ public class Server implements ServerInterface {
 			}
 		}
 		return true;
-	}
-
-	public Map<Integer,Integer> getVector() {
-		return vector;
-	}
-
-	public int getMe() {
-		return me;
 	}
 }
