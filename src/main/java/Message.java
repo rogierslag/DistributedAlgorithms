@@ -2,7 +2,6 @@ import java.io.Serializable;
 import java.util.Map;
 
 import lombok.AllArgsConstructor;
-import lombok.Synchronized;
 
 @AllArgsConstructor
 public class Message implements Serializable {
@@ -12,17 +11,14 @@ public class Message implements Serializable {
 	private final Map<Integer,Integer> vector;
 	private final int sender;
 
-	@Synchronized
 	public String getMessage() {
 		return message;
 	}
 
-	@Synchronized
 	public Map<Integer,Integer> getVector() {
 		return vector;
 	}
 	
-	@Synchronized
 	public int getSender() {
 		return sender;
 	}
