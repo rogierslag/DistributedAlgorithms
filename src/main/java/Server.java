@@ -10,6 +10,10 @@ import java.util.Map;
 import java.util.Random;
 
 import lombok.Getter;
+import lombok.Synchronized;
+
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
        
 @Getter
 public class Server extends Thread implements ServerInterface {
@@ -28,7 +32,7 @@ public class Server extends Thread implements ServerInterface {
 		this.numberOfCycles = numberOfCycles;
 		
 		for(int i = 0; i < total; i++ ) {
-			getVector().put(i, 0);
+			vector.put(i, 0);
 		}
 	}
 
@@ -52,53 +56,62 @@ public class Server extends Thread implements ServerInterface {
     	}
     }
     
+    @Synchronized
 	@Override
 	public void recieve(Message message) throws RemoteException {
-		List<Message> copyQueue = new ArrayList<>(queue);
+    	List<Message> syncQueue = queue;
 		if (canBeDelivered(message)) {
-			deliver(message, queue);
+			incrementClock(message.getSender());
+			syncQueue.remove(message);
+			
+			for (Message m : getQueue()) {
+				if (canBeDelivered(m)) {
+					System.out.println("delivering queued message");
+					recieve(m);
+				}
+			}
 		}
 		else {
-			System.out.println(String.format("%d, %d Qued message from with clock %s", me , message.getSender(), message.getVector()));
-			if (!queue.contains(message)) {
-				queue.add(message);
-			}
-		}
-		
-		for (Message m : copyQueue) {
-			if (canBeDelivered(m)) {
-				System.out.println("delivering queued message");
-				recieve(m);
-			}
+//			System.out.println(String.format("%d Qued message from %d with clock %s", me , message.getSender(), message.getVector()));
+			syncQueue.add(message);
 		}
 	}
 
-	public void deliver(Message message, List<Message> copyQueue) {
-    	incrementClock(message.getSender());
-    	
-    	copyQueue.remove(message);
-
-//		System.out.println(String.format("%d, %d Received message from with clock %s", me , message.getSender(), message.getVector()));
-	}
-	
+	@Synchronized
 	private boolean canBeDelivered(Message recievedMessage) {
 		Map<Integer, Integer> messageVector = recievedMessage.getVector();
 		for (int key : messageVector.keySet()) {
-			int recievedMessageClock = messageVector.get(key);
-			int ownClock = getVector().get(key);
-			if (key == recievedMessage.getSender()) {
-				ownClock++;
-			}
-			if (ownClock < recievedMessageClock) {
+			if (key != getMe()) {
+				int recievedMessageClock = messageVector.get(key);
+				int ownClock = new HashMap<>(getVector()).get(key);
+				if (key == recievedMessage.getSender()) {
+					ownClock++;
+				}
+				if (ownClock < recievedMessageClock) {
 //				System.err.println(me +", " + key + ": " + ownClock + ",  " + recievedMessageClock);
-				return false;
+					System.err.println("MessageVector: " + recievedMessage.getSender() + ", " + messageVector);
+					System.err.println("OwnVector:     " + getMe() + ", " + getVector());
+					System.err.println();
+					return false;
+				}
 			}
 		}
 		return true;
 	}
 	
+	@Synchronized
 	private void incrementClock(int sender) {
-		getVector().put(sender, getVector().get(sender) + 1);
+		vector.put(sender, getVector().get(sender) + 1);
+	}
+	
+	@Synchronized
+	public ImmutableMap<Integer, Integer> getVector() {
+		return ImmutableMap.<Integer, Integer>builder().putAll(vector).build();
+	}
+	
+	@Synchronized
+	public ImmutableList<Message> getQueue() {
+		return ImmutableList.<Message>copyOf(queue);
 	}
 	
 	@Override
