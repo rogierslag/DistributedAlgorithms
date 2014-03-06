@@ -10,7 +10,7 @@ import java.util.List;
 public class Main {
 
 	public static final int PORT = 1099;
-	public static final int NUMBER_OF_CYCLES = 5;
+	public static final int NUMBER_OF_CYCLES = 3;
 	
 	private static final List<Server> serverList = new ArrayList<>();
 
@@ -50,7 +50,7 @@ public class Main {
 
 	private static void createServer(int myNumber, int totalNumber)
 			throws RemoteException, AlreadyBoundException, AccessException {
-		Server server = new Server(myNumber,totalNumber, NUMBER_OF_CYCLES);
+		Server server = new Server(myNumber, totalNumber, NUMBER_OF_CYCLES);
 		ServerInterface stub = (ServerInterface) UnicastRemoteObject.exportObject(server, 0);
 
 		// Bind the remote object's stub in the registry

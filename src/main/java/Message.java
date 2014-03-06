@@ -1,21 +1,21 @@
 import java.io.Serializable;
-import java.util.Map;
+import java.util.List;
 
-import lombok.AllArgsConstructor;
+import lombok.Data;
 
-@AllArgsConstructor
+@Data
 public class Message implements Serializable {
 	private static final long serialVersionUID = 8689683240497397154L;
 	
 	private final String message;
-	private final Map<Integer,Integer> vector;
+	private final List<Integer> vector;
 	private final int sender;
 
 	public String getMessage() {
 		return message;
 	}
 
-	public Map<Integer,Integer> getVector() {
+	public List<Integer> getVector() {
 		return vector;
 	}
 	

@@ -2,46 +2,38 @@ import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Random;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import lombok.Getter;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
        
 @Getter
 public class Server extends Thread implements ServerInterface {
-	private final Object $LOCK;
-	
 	private final int me;
 	private final int total;
-	private final Map<Integer, Integer> vector;
+	private final List<Integer> vector;
 	private final int numberOfCycles;
 	
-	private final List<Message> queue = new ArrayList<>();
+	private final List<Message> queue = new CopyOnWriteArrayList<>();
 	
     public Server(int me, int total, int numberOfCycles) {
 		this.me = me;
 		this.total = total;
-		this.vector = Collections.synchronizedMap(new HashMap<Integer, Integer>(total));
+		this.vector = new CopyOnWriteArrayList<>();
 		this.numberOfCycles = numberOfCycles;
-		this.$LOCK = new Object[0];
 		
 		for(int i = 0; i < total; i++ ) {
-			vector.put(i, 0);
+			vector.add(0);
 		}
 	}
 
     public void broadcast(String message) {
     	Message message2 = null;
-    	synchronized ($LOCK) {
-    		incrementClock(getMe());
-			message2 = new Message(message, getVector(), getMe());
+    	synchronized (this) {
+    		message2 = new Message(message, incrementClock(getMe()), getMe());
     	}
 	    		
 		for (int i = 0; i < total; i++) {
@@ -50,7 +42,7 @@ public class Server extends Thread implements ServerInterface {
 					Registry registry = LocateRegistry.getRegistry(Main.PORT);
 					ServerInterface stub = (ServerInterface) registry.lookup(Integer.toString(i));
 //    				System.out.println("broadcasted: " + message);
-					stub.recieve(message2);
+					stub.recieve(message2, false);
 				}
 				catch (RemoteException | NotBoundException e) {
 					System.err.println("Client exception: " + e.toString());
@@ -61,38 +53,36 @@ public class Server extends Thread implements ServerInterface {
     }
     
 	@Override
-	public void recieve(Message message) throws RemoteException {
-    	List<Message> syncQueue = queue;
+	public synchronized void recieve(Message message, boolean recursively) throws RemoteException {
+		List<Message> syncQueue = queue;
 		if (canBeDelivered(message)) {
 			deliver(message, syncQueue);
 			
 			for (Message m : getQueue()) {
 				if (canBeDelivered(m)) {
 					System.out.println("delivering queued message");
-					recieve(m);
+					recieve(m, true);
 				}
 			}
 		}
-		else {
+		else if (!recursively) {
 //			System.out.println(String.format("%d Qued message from %d with clock %s", me , message.getSender(), message.getVector()));
 			syncQueue.add(message);
 		}
 	}
 
 	private void deliver(Message message, List<Message> syncQueue) {
-		synchronized ($LOCK) {
-			incrementClock(message.getSender());
-		}
+		incrementClock(message.getSender());
 		syncQueue.remove(message);
 	}
 
 	private boolean canBeDelivered(Message recievedMessage) {
-		Map<Integer, Integer> messageVector = recievedMessage.getVector();
-		for (int key : messageVector.keySet()) {
-			if (key != getMe()) {
-				int recievedMessageClock = messageVector.get(key);
-				int ownClock = new HashMap<>(getVector()).get(key);
-				if (key == recievedMessage.getSender()) {
+		List<Integer> messageVector = recievedMessage.getVector();
+		for(int i = 0; i < total; i++ ) {
+			if (i != getMe()) {
+				int recievedMessageClock = messageVector.get(i);
+				int ownClock = vector.get(i);
+				if (i == recievedMessage.getSender()) {
 					ownClock++;
 				}
 				if (ownClock < recievedMessageClock) {
@@ -106,12 +96,13 @@ public class Server extends Thread implements ServerInterface {
 		return true;
 	}
 	
-	private void incrementClock(int sender) {
-		vector.put(sender, getVector().get(sender) + 1);
+	private synchronized List<Integer> incrementClock(int sender) {
+		vector.set(sender, vector.get(sender) + 1);
+		return vector;
 	}
 	
-	public ImmutableMap<Integer, Integer> getVector() {
-		return ImmutableMap.<Integer, Integer>builder().putAll(vector).build();
+	public List<Integer> getVector() {
+		return vector;
 	}
 	
 	public ImmutableList<Message> getQueue() {
@@ -122,7 +113,7 @@ public class Server extends Thread implements ServerInterface {
 	public void run() {
 		try {
 			for (int i = 0; i < numberOfCycles; i++) {
-				sleep((long)(Math.random() * 1));
+				sleep((long)(Math.random() * 10000));
 				broadcast(Integer.toString(new Random().nextInt()));
 			}
 			Main.checkThreads();

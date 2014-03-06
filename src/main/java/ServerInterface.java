@@ -2,5 +2,5 @@ import java.rmi.Remote;
 import java.rmi.RemoteException;
 
 public interface ServerInterface extends Remote {
-    void recieve(Message message) throws RemoteException;
+    void recieve(Message message, boolean recursivaly) throws RemoteException;
 }
