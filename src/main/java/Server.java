@@ -10,15 +10,14 @@ import java.util.Map;
 import java.util.Random;
 
 import lombok.Getter;
-import lombok.Synchronized;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Maps;
        
 @Getter
 public class Server extends Thread implements ServerInterface {
-
+	private final Object $LOCK;
+	
 	private final int me;
 	private final int total;
 	private final Map<Integer, Integer> vector;
@@ -31,6 +30,7 @@ public class Server extends Thread implements ServerInterface {
 		this.total = total;
 		this.vector = Collections.synchronizedMap(new HashMap<Integer, Integer>(total));
 		this.numberOfCycles = numberOfCycles;
+		this.$LOCK = new Object[0];
 		
 		for(int i = 0; i < total; i++ ) {
 			vector.put(i, 0);
@@ -38,27 +38,28 @@ public class Server extends Thread implements ServerInterface {
 	}
 
     public void broadcast(String message) {
-    	Map<Integer, Integer> incrementedVector = Maps.newHashMap(vector);
-    	incrementClock(incrementedVector, getMe());
-    	
-    	for (int i = 0; i < total; i++) {
-    		if (i != this.getMe()) {
-    			try {
-    				Registry registry = LocateRegistry.getRegistry(Main.PORT);
-    				ServerInterface stub = (ServerInterface) registry.lookup(Integer.toString(i));
-//    				System.out.println("broadcasted: " + message);
-    				stub.recieve(new Message(message, incrementedVector, getMe()));
-    			}
-    			catch (RemoteException | NotBoundException e) {
-    				System.err.println("Client exception: " + e.toString());
-    				e.printStackTrace();
-    			}
-    		}
-    		
+    	Message message2 = null;
+    	synchronized ($LOCK) {
+    		incrementClock(getMe());
+			message2 = new Message(message, getVector(), getMe());
     	}
+	    		
+		for (int i = 0; i < total; i++) {
+			if (i != this.getMe()) {
+				try {
+					Registry registry = LocateRegistry.getRegistry(Main.PORT);
+					ServerInterface stub = (ServerInterface) registry.lookup(Integer.toString(i));
+//    				System.out.println("broadcasted: " + message);
+					stub.recieve(message2);
+				}
+				catch (RemoteException | NotBoundException e) {
+					System.err.println("Client exception: " + e.toString());
+					e.printStackTrace();
+				}
+			}
+		}
     }
     
-    @Synchronized
 	@Override
 	public void recieve(Message message) throws RemoteException {
     	List<Message> syncQueue = queue;
@@ -79,11 +80,12 @@ public class Server extends Thread implements ServerInterface {
 	}
 
 	private void deliver(Message message, List<Message> syncQueue) {
-		incrementClock(vector, message.getSender());
+		synchronized ($LOCK) {
+			incrementClock(message.getSender());
+		}
 		syncQueue.remove(message);
 	}
 
-	@Synchronized
 	private boolean canBeDelivered(Message recievedMessage) {
 		Map<Integer, Integer> messageVector = recievedMessage.getVector();
 		for (int key : messageVector.keySet()) {
@@ -94,7 +96,6 @@ public class Server extends Thread implements ServerInterface {
 					ownClock++;
 				}
 				if (ownClock < recievedMessageClock) {
-//				System.err.println(me +", " + key + ": " + ownClock + ",  " + recievedMessageClock);
 					System.err.println("MessageVector: " + recievedMessage.getSender() + ", " + messageVector);
 					System.err.println("OwnVector:     " + getMe() + ", " + getVector());
 					System.err.println();
@@ -105,17 +106,14 @@ public class Server extends Thread implements ServerInterface {
 		return true;
 	}
 	
-	@Synchronized
-	private void incrementClock(Map<Integer, Integer> vectorToIncrement, int sender) {
-		vectorToIncrement.put(sender, getVector().get(sender) + 1);
+	private void incrementClock(int sender) {
+		vector.put(sender, getVector().get(sender) + 1);
 	}
 	
-	@Synchronized
 	public ImmutableMap<Integer, Integer> getVector() {
 		return ImmutableMap.<Integer, Integer>builder().putAll(vector).build();
 	}
 	
-	@Synchronized
 	public ImmutableList<Message> getQueue() {
 		return ImmutableList.<Message>copyOf(queue);
 	}

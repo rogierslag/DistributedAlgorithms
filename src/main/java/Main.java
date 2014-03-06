@@ -10,7 +10,7 @@ import java.util.List;
 public class Main {
 
 	public static final int PORT = 1099;
-	public static final int NUMBER_OF_CYCLES = 10;
+	public static final int NUMBER_OF_CYCLES = 5;
 	
 	private static final List<Server> serverList = new ArrayList<>();
 
@@ -37,11 +37,13 @@ public class Main {
 	public static void checkThreads() {
 		for (Server server : serverList) {
 			List<Message> que = server.getQueue();
-			System.err.println("size " + server.getMe() + ": " + que.size());
+			System.err.print("size " + server.getMe() + ": " + que.size());
 //			System.err.println(server.getVector());
-//			for (Message message : que) {
-//				System.err.println(message.getVector());
-//			}
+			for (Message message : que) {
+				System.err.print(" " + message.getVector());
+			}
+			
+			System.err.println();
 		}
 //		System.err.println("done");
 	}
