@@ -113,7 +113,7 @@ public class Server extends Thread implements ServerInterface {
 	public void run() {
 		try {
 			for (int i = 0; i < numberOfCycles; i++) {
-				sleep((long)(Math.random() * 10000));
+				sleep((long)(Math.random() * 1000));
 				broadcast(Integer.toString(new Random().nextInt()));
 			}
 			Main.checkThreads();
