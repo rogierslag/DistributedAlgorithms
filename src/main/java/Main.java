@@ -18,7 +18,7 @@ public class Main {
 	public static final int ORDINARY_SLEEP = 0;
 
 	public static final int CANDIDATE_COUNT = 10;
-	public static final int ORDINARY_COUNT = 7;
+	public static final int ORDINARY_COUNT = 0;
 
 	public static void main(String[] args) {
 		List<Candidate> candidates = new ArrayList<>();
@@ -27,13 +27,14 @@ public class Main {
 
 		// Create the thingies
 		for (int i = 0; i < Main.ORDINARY_COUNT; i++) {
-			ordinaries.add(new Ordinary((new Random()).nextInt(1000)));
+			ordinaries.add(new Ordinary((new Random()).nextInt(1000),-2));
 		}
 		for (int i = 0; i < Main.CANDIDATE_COUNT; i++) {
 			int id = (new Random()).nextInt(1000)+1000;
-			ordinaries.add(new Ordinary(id));
+            int level = new Random().nextInt(10);
+			ordinaries.add(new Ordinary(id,level-2));
 			candidates.add(new Candidate(id,
-					ordinaries));
+					ordinaries,level));
 		}
 
 		// Add them to a thread list
@@ -42,11 +43,6 @@ public class Main {
 		}
 		for (int i = 0; i < Main.CANDIDATE_COUNT; i++) {
 			threads.add((SyncInterface) candidates.get(i));
-		}
-		
-		// Start the threads
-		for (int i = 0; i < threads.size(); i++) {
-//			new Thread(threads.get(i)).start();
 		}
 		
 		System.out.println(threads);

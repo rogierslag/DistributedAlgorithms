@@ -47,10 +47,11 @@ public class Candidate implements CandidateInterface {
      * @param id the id
      * @param links a list of all the ordinaries
      */
-	public Candidate(int id, List<Ordinary> links) {
+	public Candidate(int id, List<Ordinary> links, int level) {
 		this.links = new ArrayList<>(links);
 		this.sent = new ArrayList<>();
 		this.id = id;
+        this.level = level;
 		System.out.println(new StringBuilder("I was just initialized as ")
 				.append(this).append(" with an id of ").append(id).toString());
 	}

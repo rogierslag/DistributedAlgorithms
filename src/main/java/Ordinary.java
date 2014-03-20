@@ -36,6 +36,7 @@ public class Ordinary implements OrdinaryInterface {
      */
     public Ordinary() {
         this.id = new Random().nextInt();
+
         System.out.println(new StringBuilder("I was just initialized as ")
                 .append(this).append(" with an id of ").append(this.id)
                 .toString());
@@ -45,8 +46,9 @@ public class Ordinary implements OrdinaryInterface {
      * Start the ordinary with a predefined id and log some data
      * @param id the ID to initialize with
      */
-    public Ordinary(int id) {
+    public Ordinary(int id, int level) {
         this.id = id;
+        this.level = level;
         System.out.println(new StringBuilder("I was just initialized as ")
                 .append(this).append(" with an id of ").append(this.id)
                 .toString());
@@ -73,9 +75,16 @@ public class Ordinary implements OrdinaryInterface {
         level++;
         sendTo = null;
         // Sort the responses (using PossibleResponse.compareTo) to order the responses
-        PossibleResponse highestResponse = null;
+        List<PossibleResponse> highestResponses = new ArrayList<>();
         for(PossibleResponse response : responses) {
-            if ( highestResponse == null || response.getSender() > highestResponse.getSender()) {
+            if ( response.getLevel() >= level) {
+                highestResponses.add(response);
+            }
+        }
+
+        PossibleResponse highestResponse = null;
+        for(PossibleResponse response : highestResponses) {
+            if ( highestResponse == null || response.getSender() >= highestResponse.getSender()) {
                 highestResponse = response;
             }
         }
