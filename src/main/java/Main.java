@@ -1,5 +1,6 @@
 import java.rmi.RemoteException;
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
 
@@ -12,17 +13,17 @@ import java.util.Random;
  */
 public class Main {
 
-	public static final int MAIN_SLEEP = 1000;
-	public static final int CANDIDATE_SLEEP = 100;
-	public static final int ORDINARY_SLEEP = 100;
+	public static final int MAIN_SLEEP = 10;
+	public static final int CANDIDATE_SLEEP = 0;
+	public static final int ORDINARY_SLEEP = 0;
 
-	public static final int CANDIDATE_COUNT = 3;
+	public static final int CANDIDATE_COUNT = 10;
 	public static final int ORDINARY_COUNT = 7;
 
 	public static void main(String[] args) {
 		List<Candidate> candidates = new ArrayList<>();
 		List<Ordinary> ordinaries = new ArrayList<>();
-		List<SyncInterface> threads = new ArrayList<>();
+		List<SyncInterface> threads = new LinkedList<>();
 
 		// Create the thingies
 		for (int i = 0; i < Main.ORDINARY_COUNT; i++) {
@@ -45,7 +46,7 @@ public class Main {
 		
 		// Start the threads
 		for (int i = 0; i < threads.size(); i++) {
-			new Thread(threads.get(i)).start();
+//			new Thread(threads.get(i)).start();
 		}
 		
 		System.out.println(threads);
@@ -63,6 +64,7 @@ public class Main {
 					threads.get(i).nextRound();
 
 				} catch (RemoteException e) {
+                    e.printStackTrace();
 				}
 			}
 

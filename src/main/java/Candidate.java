@@ -48,7 +48,7 @@ public class Candidate implements CandidateInterface {
      * @param links a list of all the ordinaries
      */
 	public Candidate(int id, List<Ordinary> links) {
-		this.links = links;
+		this.links = new ArrayList<>(links);
 		this.sent = new ArrayList<>();
 		this.id = id;
 		System.out.println(new StringBuilder("I was just initialized as ")
@@ -56,7 +56,7 @@ public class Candidate implements CandidateInterface {
 	}
 
     @Synchronized
-    /**
+    /**\
      * Determine which step of the algorithm to run
      */
     public void run() {
@@ -89,6 +89,7 @@ public class Candidate implements CandidateInterface {
 			int k = Math.min((int) Math.pow(2, (level / 2)), links.size());
 			sent = new ArrayList<Ordinary>();
             PossibleResponse R = new PossibleResponse(level, id, this);
+            Collections.shuffle(links);
 			for (int i = 0; i < k; i++) {
                 // Send a message to the k ordinaries
 				try {
@@ -166,4 +167,6 @@ public class Candidate implements CandidateInterface {
 	public boolean hasDied() {
 		return died;
 	}
+
+    public String toString() { return id+""; }
 }

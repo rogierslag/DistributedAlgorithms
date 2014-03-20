@@ -73,21 +73,24 @@ public class Ordinary implements OrdinaryInterface {
         level++;
         sendTo = null;
         // Sort the responses (using PossibleResponse.compareTo) to order the responses
-        responses.remove(null);
-        Collections.sort(responses);
+        PossibleResponse highestResponse = null;
+        for(PossibleResponse response : responses) {
+            if ( highestResponse == null || response.getSender() > highestResponse.getSender()) {
+                highestResponse = response;
+            }
+        }
         // When no responses are present, terminate this loop
-        if (responses.size() == 0) {
+        if (highestResponse == null) {
             return;
         }
         // Get the highest ranking response of the list
-        responses.remove(null);
-        PossibleResponse R = responses.get(responses.size()-1);
+        System.out.println(highestResponse);
         // Compare this to the values of the ordinary
-        if (R.getSender() >= id || R.getLevel() >= level) {
+        if (highestResponse.getSender() >= id || highestResponse.getLevel() >= level) {
             // If the response is larger, send a response
-            level = R.level;
-            id = R.sender;
-            sendTo = R.candidate;
+            level = highestResponse.level;
+            id = highestResponse.sender;
+            sendTo = highestResponse.candidate;
         } else {
             // Else don't
             sendTo = null;
@@ -135,4 +138,5 @@ public class Ordinary implements OrdinaryInterface {
         return false;
     }
 
+    public String toString() { return id+""; }
 }
