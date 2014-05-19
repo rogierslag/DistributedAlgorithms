@@ -1,135 +1,182 @@
+import java.io.Serializable;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Random;
 
+import com.google.common.base.Predicate;
+import com.google.common.collect.Collections2;
+import com.google.common.collect.ImmutableList;
 import lombok.Getter;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-       
 @Getter
-public class Server extends Thread implements ServerInterface {
-	private final Object $LOCK;
-	
+public class Server extends Thread implements ServerInterface, Serializable {
+
 	private final int me;
+	private final int traitors;
 	private final int total;
-	private final Map<Integer, Integer> vector;
-	private final int numberOfCycles;
-	
+
 	private final List<Message> queue = new ArrayList<>();
-	
-    public Server(int me, int total, int numberOfCycles) {
+	private int v;
+	private int round = 1;
+	private boolean decided = false;
+	private int traitorType;
+
+	public Server(int me, int total, int traitors) {
 		this.me = me;
 		this.total = total;
-		this.vector = Collections.synchronizedMap(new HashMap<Integer, Integer>(total));
-		this.numberOfCycles = numberOfCycles;
-		this.$LOCK = new Object[0];
-		
-		for(int i = 0; i < total; i++ ) {
-			vector.put(i, 0);
-		}
+		this.traitors = traitors;
+		this.v = randomVal();
+		this.traitorType = new Random().nextInt(2);
 	}
 
-    public void broadcast(String message) {
-    	Message message2 = null;
-    	synchronized ($LOCK) {
-    		incrementClock(getMe());
-			message2 = new Message(message, getVector(), getMe());
-    	}
-	    		
+	private int randomVal() {
+		int x = (new Random()).nextInt(2);
+		System.out.println("Random val for " + me + " = " + x);
+		return x;
+	}
+
+	public void broadcast(Message message) {
+		if (me < traitors) {
+			if ((new Random()).nextInt(1) == this.traitorType) {
+				System.err.println("I'm traiting (" + me + ")");
+				return;
+			}
+		}
+
 		for (int i = 0; i < total; i++) {
-			if (i != this.getMe()) {
-				try {
-					Registry registry = LocateRegistry.getRegistry(Main.PORT);
-					ServerInterface stub = (ServerInterface) registry.lookup(Integer.toString(i));
-//    				System.out.println("broadcasted: " + message);
-					stub.recieve(message2);
-				}
-				catch (RemoteException | NotBoundException e) {
-					System.err.println("Client exception: " + e.toString());
-					e.printStackTrace();
-				}
+			try {
+				Registry registry = LocateRegistry.getRegistry(Main.PORT);
+				ServerInterface stub = (ServerInterface) registry.lookup(Integer.toString(i));
+				stub.receive(message);
+			}
+			catch (RemoteException | NotBoundException e) {
+				System.err.println("Client exception: " + e.toString());
+				e.printStackTrace();
 			}
 		}
-    }
-    
+	}
+
 	@Override
-	public void recieve(Message message) throws RemoteException {
-    	List<Message> syncQueue = queue;
-		if (canBeDelivered(message)) {
-			deliver(message, syncQueue);
-			
-			for (Message m : getQueue()) {
-				if (canBeDelivered(m)) {
-					System.out.println("delivering queued message");
-					recieve(m);
-				}
+	public void receive(Message message) throws RemoteException {
+		synchronized (queue) {
+			if (message != null) {
+				queue.add(message);
 			}
-		}
-		else {
-//			System.out.println(String.format("%d Qued message from %d with clock %s", me , message.getSender(), message.getVector()));
-			syncQueue.add(message);
 		}
 	}
 
-	private void deliver(Message message, List<Message> syncQueue) {
-		synchronized ($LOCK) {
-			incrementClock(message.getSender());
-		}
-		syncQueue.remove(message);
-	}
-
-	private boolean canBeDelivered(Message recievedMessage) {
-		Map<Integer, Integer> messageVector = recievedMessage.getVector();
-		for (int key : messageVector.keySet()) {
-			if (key != getMe()) {
-				int recievedMessageClock = messageVector.get(key);
-				int ownClock = new HashMap<>(getVector()).get(key);
-				if (key == recievedMessage.getSender()) {
-					ownClock++;
-				}
-				if (ownClock < recievedMessageClock) {
-					System.err.println("MessageVector: " + recievedMessage.getSender() + ", " + messageVector);
-					System.err.println("OwnVector:     " + getMe() + ", " + getVector());
-					System.err.println();
-					return false;
-				}
-			}
-		}
-		return true;
-	}
-	
-	private void incrementClock(int sender) {
-		vector.put(sender, getVector().get(sender) + 1);
-	}
-	
-	public ImmutableMap<Integer, Integer> getVector() {
-		return ImmutableMap.<Integer, Integer>builder().putAll(vector).build();
-	}
-	
-	public ImmutableList<Message> getQueue() {
-		return ImmutableList.<Message>copyOf(queue);
-	}
-	
 	@Override
 	public void run() {
-		try {
-			for (int i = 0; i < numberOfCycles; i++) {
-				sleep((long)(Math.random() * 1));
-				broadcast(Integer.toString(new Random().nextInt()));
+
+		while (true) {
+			System.out.println("Round number "+round);
+			broadcast(new Message(Message.types.NOTIFICATION, v, round, getMe()));
+			boolean doneWaiting = false;
+			ImmutableList<Message> relevantMessages = ImmutableList.copyOf(new ArrayList<Message>());
+			while (!doneWaiting) {
+				synchronized (queue) {
+					relevantMessages = ImmutableList.copyOf(Collections2.filter(queue, new Predicate<Message>() {
+						@Override
+						public boolean apply(Message message) {
+							return Message.types.NOTIFICATION.equals(message.getType()) && message.getRound() == round;
+						}
+					}));
+				}
+				if (relevantMessages.size() >= total - traitors) {
+					doneWaiting = true;
+				}
+				else {
+					try {
+						Thread.sleep(10);
+					}
+					catch (InterruptedException e) {
+					}
+				}
+
 			}
-			Main.checkThreads();
-		}
-		catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+
+			// Count the occurences
+			int[] results = new int[2];
+			results[0] = 0;
+			results[1] = 0;
+			for (Message m : relevantMessages) {
+				results[m.getValue()]++;
+			}
+
+			int threshold = (total + traitors) / 2;
+			if (results[0] > threshold) {
+				broadcast(new Message(Message.types.PROPOSAL, 0, round, getMe()));
+			}
+			else if (results[1] > threshold) {
+				broadcast(new Message(Message.types.PROPOSAL, 1, round, getMe()));
+			}
+			else {
+				broadcast(new Message(Message.types.PROPOSAL, -1, round, getMe()));
+			}
+			if (decided) {
+				break;
+			}
+
+			doneWaiting = false;
+			relevantMessages = ImmutableList.copyOf(new ArrayList<Message>());
+			while (!doneWaiting) {
+				synchronized (queue) {
+					relevantMessages = ImmutableList.copyOf(Collections2.filter(queue, new Predicate<Message>() {
+						@Override
+						public boolean apply(Message message) {
+							return message.getType().equals(Message.types.PROPOSAL) && message.getRound() == round;
+						}
+					}));
+				}
+				if (relevantMessages.size() >= total - traitors) {
+					doneWaiting = true;
+				}
+				else {
+					try {
+						Thread.sleep(10);
+					}
+					catch (InterruptedException e) {
+					}
+				}
+			}
+
+			results = new int[2];
+			results[0] = 0;
+			results[1] = 0;
+			for (Message m : relevantMessages) {
+				if (m.getValue() != -1) {
+					results[m.getValue()]++;
+				}
+			}
+			threshold = 3 * traitors;
+			if (results[0] > traitors) {
+				this.v = 0;
+				if (results[0] > threshold) {
+					decided = true;
+					System.out.println("Decided on: 0");
+				}
+			}
+			else if (results[1] > traitors) {
+				this.v = 1;
+				if (results[1] > threshold) {
+					decided = true;
+					System.out.println("Decided on: 1");
+				}
+			}
+			else {
+				v = randomVal();
+			}
+			round++;
+			try {
+				Thread.sleep((new Random()).nextInt(500));
+			}
+			catch (InterruptedException e) {
+			}
 		}
 	}
 }
+

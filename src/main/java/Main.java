@@ -10,18 +10,21 @@ import java.util.List;
 public class Main {
 
 	public static final int PORT = 1099;
-	public static final int NUMBER_OF_CYCLES = 5;
-	
+
 	private static final List<Server> serverList = new ArrayList<>();
 
 	public static void main(String args[]) {
     	
         try {
         	java.rmi.registry.LocateRegistry.createRegistry(PORT);
-            
 			int totalNumber = Integer.parseInt(args[0]);
+	        int traitors = Integer.parseInt(args[1]);
+//	        if ( traitors >= (totalNumber+0.0)/5) {
+//		        System.err.println("Can't deal with this!");
+//		        System.exit(2);
+//	        }
 			for(int i = 0; i < totalNumber; i++) {
-				createServer(i, totalNumber);
+				createServer(i, totalNumber, traitors);
 			}
 			
 			for (Server server : serverList) {
@@ -34,23 +37,9 @@ public class Main {
         }
     }
 	
-	public static void checkThreads() {
-		for (Server server : serverList) {
-			List<Message> que = server.getQueue();
-			System.err.print("size " + server.getMe() + ": " + que.size());
-//			System.err.println(server.getVector());
-			for (Message message : que) {
-				System.err.print(" " + message.getVector());
-			}
-			
-			System.err.println();
-		}
-//		System.err.println("done");
-	}
-
-	private static void createServer(int myNumber, int totalNumber)
+	private static void createServer(int myNumber, int totalNumber, int traitors)
 			throws RemoteException, AlreadyBoundException, AccessException {
-		Server server = new Server(myNumber,totalNumber, NUMBER_OF_CYCLES);
+		Server server = new Server(myNumber,totalNumber,traitors);
 		ServerInterface stub = (ServerInterface) UnicastRemoteObject.exportObject(server, 0);
 
 		// Bind the remote object's stub in the registry
@@ -59,6 +48,6 @@ public class Main {
 		
 		serverList.add(server);
 
-		System.out.println("Server" + myNumber + "ready");
+		System.out.println("Server " + myNumber + " ready");
 	}
 }

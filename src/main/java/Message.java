@@ -1,25 +1,24 @@
 import java.io.Serializable;
-import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
 
 import lombok.AllArgsConstructor;
+import lombok.Data;
 
+/**
+ * Created by Rogier on 19-05-14.
+ */
 @AllArgsConstructor
+@Data
 public class Message implements Serializable {
-	private static final long serialVersionUID = 8689683240497397154L;
-	
-	private final String message;
-	private final Map<Integer,Integer> vector;
-	private final int sender;
 
-	public String getMessage() {
-		return message;
-	}
+	private final Message.types type;
+	private final int value;
+	private final int round;
+	private final int sendingServer;
 
-	public Map<Integer,Integer> getVector() {
-		return vector;
-	}
-	
-	public int getSender() {
-		return sender;
+	public enum types {
+		NOTIFICATION,
+		PROPOSAL
 	}
 }
